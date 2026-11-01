@@ -1,0 +1,108 @@
+name: CI / CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: 'ci-cd'
+  cancel-in-progress: true
+
+jobs:
+  test-python:
+    name: Python Acceptance Tests (Ubuntu 22.04)
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Verify zero external dependencies
+        run: |
+          echo "Verifying no pip dependencies required..."
+          python3 --version
+
+      - name: Run 20 Acceptance Tests (tests/test_acceptance.py)
+        run: |
+          python3 -m unittest discover -s tests -v
+
+      - name: Verify Live Demo Scenario
+        run: |
+          # 1. Snapshot
+          python3 -m classconfig snapshot --source demo/config --baseline demo/test_baseline
+          # 2. Check without changes (expect exit code 0)
+          python3 -m classconfig check --source demo/config --baseline demo/test_baseline --report demo/test_report.html
+          # Clean up
+          rm -rf demo/test_baseline demo/test_report.html
+
+  test-and-build-web:
+    name: Web Demo Build & Unit Tests
+    runs-on: ubuntu-latest
+    needs: test-python
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: web/package.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Engine Logic Unit Tests
+        run: npx tsx --test tsx_server/utils/engine.test.ts
+
+      - name: Run TypeScript type check
+        run: npm run lint
+
+      - name: Build static HTML5 web app
+        run: npm run build
+
+      - name: Upload Pages Artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'web/dist'
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    if: github.ref == 'refs/heads/main'
+    needs: test-and-build-web
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

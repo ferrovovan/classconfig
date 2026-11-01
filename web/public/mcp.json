@@ -1,0 +1,163 @@
+{
+  "name": "classconfig-mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol (MCP) Server for ClassConfig - snapshot, check, and configuration audit tool",
+  "protocolVersion": "2025-06-18",
+  "supportedProtocolVersions": [
+    "2025-06-18",
+    "2025-03-26",
+    "2024-11-05"
+  ],
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    },
+    "resources": {},
+    "prompts": {}
+  },
+  "tools": [
+    {
+      "name": "classconfig_snapshot",
+      "title": "Создание эталона",
+      "description": "Атомарно сохраняет эталонный снимок плоской папки текстовых конфигураций (до 20 файлов, до 1 МиБ каждый, UTF-8): копирует файлы в baseline/files/ и записывает manifest.json с SHA-256.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Путь к папке-источнику конфигураций"
+          },
+          "baseline": {
+            "type": "string",
+            "description": "Путь к создаваемому каталогу эталона (не должен существовать)"
+          }
+        },
+        "required": [
+          "source",
+          "baseline"
+        ]
+      },
+      "annotations": {
+        "title": "Создание эталона",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "classconfig_check",
+      "title": "Проверка с эталоном",
+      "description": "Сравнивает папку с эталоном, генерирует автономный HTML-отчёт и возвращает счётчики (changed/added/deleted/unchanged) и пофайловые статусы. exit_code: 0 — отличий нет, 1 — отличия найдены (штатный успех), 2 — ошибка.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Путь к проверяемой папке"
+          },
+          "baseline": {
+            "type": "string",
+            "description": "Путь к каталогу эталона"
+          },
+          "report": {
+            "type": "string",
+            "description": "Путь к создаваемому HTML-файлу отчёта"
+          },
+          "include_report_html": {
+            "type": "boolean",
+            "description": "Вернуть полный HTML отчёта в structuredContent (по умолчанию false)",
+            "default": false
+          }
+        },
+        "required": [
+          "source",
+          "baseline",
+          "report"
+        ]
+      },
+      "annotations": {
+        "title": "Проверка с эталоном",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "classconfig_validate",
+      "title": "Валидация папки",
+      "description": "Проверяет папку на архитектурные лимиты ClassConfig: не более 20 файлов, не более 1 МиБ на файл, только текст UTF-8 без NUL, без симлинков и подкаталогов.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Путь к проверяемой папке"
+          }
+        },
+        "required": [
+          "source"
+        ]
+      },
+      "annotations": {
+        "title": "Валидация папки",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "classconfig_generate_guide",
+      "title": "Генерация руководства",
+      "description": "Автоматически формирует актуальный документ «docs/GUIDE.md» (руководство пользователя) с параметрами проекта.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_name": {
+            "type": "string",
+            "default": "ClassConfig"
+          },
+          "demo_url": {
+            "type": "string",
+            "default": "https://ferrovovan.github.io/classconfig"
+          },
+          "repo_url": {
+            "type": "string",
+            "default": "https://github.com/ferrovovan/classconfig"
+          },
+          "output_path": {
+            "type": "string",
+            "description": "Куда записать .md (по умолчанию docs/GUIDE.md)"
+          }
+        },
+        "required": []
+      },
+      "annotations": {
+        "title": "Генерация руководства",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "classconfig_get_limits",
+      "title": "Лимиты и коды ошибок",
+      "description": "Возвращает неизменяемые архитектурные лимиты, константы манифеста, коды возврата и все 17 кодов ошибок ClassConfig.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "annotations": {
+        "title": "Лимиты и коды ошибок",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ]
+}
